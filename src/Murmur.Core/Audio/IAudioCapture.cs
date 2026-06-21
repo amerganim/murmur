@@ -3,7 +3,7 @@ namespace Murmur.Core.Audio;
 /// <summary>
 /// Captures microphone audio between a start and stop, returning samples ready for Whisper.
 /// </summary>
-public interface IAudioCapture
+public interface IAudioCapture : IDisposable
 {
     /// <summary>Whether a capture session is currently running.</summary>
     bool IsCapturing { get; }
