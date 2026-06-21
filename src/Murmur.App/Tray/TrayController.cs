@@ -13,6 +13,7 @@ namespace Murmur.App.Tray;
 public sealed class TrayController : IDisposable
 {
     private readonly TaskbarIcon _icon;
+    private readonly RecordingOverlay _overlay = new();
     private readonly BitmapImage _idleIcon = LoadIcon("murmur-idle.ico");
     private readonly BitmapImage _listeningIcon = LoadIcon("murmur-listening.ico");
     private readonly BitmapImage _busyIcon = LoadIcon("murmur-busy.ico");
@@ -46,6 +47,19 @@ public sealed class TrayController : IDisposable
                 TrayState.Transcribing => (_busyIcon, "Murmur — transcribing…"),
                 _ => (_idleIcon, "Murmur — ready"),
             };
+
+            switch (state)
+            {
+                case TrayState.Listening:
+                    _overlay.ShowListening();
+                    break;
+                case TrayState.Transcribing:
+                    _overlay.ShowTranscribing();
+                    break;
+                default:
+                    _overlay.HideOverlay();
+                    break;
+            }
         });
     }
 
@@ -88,5 +102,9 @@ public sealed class TrayController : IDisposable
         return image;
     }
 
-    public void Dispose() => _icon.Dispose();
+    public void Dispose()
+    {
+        _overlay.Close();
+        _icon.Dispose();
+    }
 }

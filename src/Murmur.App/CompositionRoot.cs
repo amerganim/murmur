@@ -76,6 +76,43 @@ public sealed class CompositionRoot : IDisposable
             Application.Current.Dispatcher);
         _controller.Start();
 
+        if (_settings.FirstRunCompleted)
+        {
+            _ = EnsureModelReadyAsync();
+        }
+        else
+        {
+            RunFirstRunWizard();
+        }
+    }
+
+    private void RunFirstRunWizard()
+    {
+        var devices = _deviceEnumerator.GetCaptureDevices();
+        var wizard = new FirstRunWizard(
+            _settings,
+            devices,
+            _modelProvider!,
+            _speechToText!,
+            vk =>
+            {
+                if (_hotkey is not null)
+                {
+                    _hotkey.VirtualKey = vk;
+                }
+            });
+
+        wizard.ShowDialog();
+
+        // Persist whatever the user chose and apply it, then make sure the model is ready in
+        // case they closed the wizard before the test step finished preparing it.
+        _ = _settingsStore.SaveAsync(_settings);
+        AutoStartManager.SetEnabled(_settings.StartWithWindows);
+        if (_hotkey is not null)
+        {
+            _hotkey.VirtualKey = _settings.HotkeyVirtualKey;
+        }
+
         _ = EnsureModelReadyAsync();
     }
 
@@ -143,17 +180,25 @@ public sealed class CompositionRoot : IDisposable
             return;
         }
 
+        var modelName = _settings.ModelName;
+        var needsDownload = !File.Exists(_modelProvider.GetModelPath(modelName));
+        ModelDownloadWindow? progressWindow = null;
+
         try
         {
-            var needsDownload = !File.Exists(_modelProvider.GetModelPath(_settings.ModelName));
+            ModelDownloadProgress? progress = null;
             if (needsDownload)
             {
-                _tray.ShowInfo(
-                    "Downloading speech model",
-                    $"Getting the '{_settings.ModelName}' model. This stays on your PC and only downloads once.");
+                var dispatcher = Application.Current.Dispatcher;
+                dispatcher.Invoke(() =>
+                {
+                    progressWindow = new ModelDownloadWindow(modelName);
+                    progressWindow.Show();
+                });
+                progress = (f, r, t) => progressWindow?.Report(f, r, t);
             }
 
-            await _modelProvider.EnsureModelAsync(_settings.ModelName).ConfigureAwait(false);
+            await _modelProvider.EnsureModelAsync(modelName, progress).ConfigureAwait(false);
             await _speechToText.WarmUpAsync().ConfigureAwait(false);
 
             if (needsDownload)
@@ -166,6 +211,13 @@ public sealed class CompositionRoot : IDisposable
             _tray.ShowError(
                 "Speech model unavailable",
                 $"Murmur couldn't prepare the model: {ex.Message}");
+        }
+        finally
+        {
+            if (progressWindow is not null)
+            {
+                Application.Current.Dispatcher.Invoke(() => progressWindow.Close());
+            }
         }
     }
 

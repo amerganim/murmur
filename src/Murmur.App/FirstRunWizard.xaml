@@ -1,0 +1,80 @@
+<Window x:Class="Murmur.App.FirstRunWizard"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to Murmur"
+        Width="480"
+        Height="380"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Step content: only one panel visible at a time. -->
+        <Grid Grid.Row="0">
+            <StackPanel x:Name="PanelWelcome">
+                <TextBlock Text="Welcome to Murmur" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Foreground="#444">
+                    Murmur turns your voice into text in any app — hold a hotkey, speak, and your
+                    words are typed where your cursor is.
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Foreground="#444">
+                    Everything runs locally on your PC. No account, no cloud, and your voice never
+                    leaves your machine.
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Foreground="Gray">
+                    Let's set up your microphone, model, and hotkey — it takes about a minute.
+                </TextBlock>
+            </StackPanel>
+
+            <StackPanel x:Name="PanelMic" Visibility="Collapsed">
+                <TextBlock Text="Choose your microphone" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Pick the mic you'll dictate with. You can change this later in Settings."
+                           TextWrapping="Wrap" Foreground="Gray" Margin="0,6,0,16" />
+                <ComboBox x:Name="MicCombo" Padding="6,4" />
+            </StackPanel>
+
+            <StackPanel x:Name="PanelModel" Visibility="Collapsed">
+                <TextBlock Text="Choose a speech model" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock TextWrapping="Wrap" Foreground="Gray" Margin="0,6,0,16">
+                    Bigger models are more accurate but slower and larger to download.
+                    Base is a great starting point.
+                </TextBlock>
+                <ComboBox x:Name="ModelCombo" Padding="6,4" />
+            </StackPanel>
+
+            <StackPanel x:Name="PanelHotkey" Visibility="Collapsed">
+                <TextBlock Text="Pick your hotkey" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Hold this key while you speak (push to talk)."
+                           TextWrapping="Wrap" Foreground="Gray" Margin="0,6,0,16" />
+                <ComboBox x:Name="HotkeyCombo" Padding="6,4" />
+                <CheckBox x:Name="AutoStartCheck" Content="Start Murmur when I sign in to Windows"
+                          Margin="0,16,0,0" />
+            </StackPanel>
+
+            <StackPanel x:Name="PanelTest" Visibility="Collapsed">
+                <TextBlock Text="Try it out" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock x:Name="TestStatus" TextWrapping="Wrap" Foreground="Gray"
+                           Margin="0,6,0,12" Text="Preparing your model…" />
+                <ProgressBar x:Name="DownloadBar" Height="18" Minimum="0" Maximum="100"
+                             Visibility="Collapsed" />
+                <TextBlock x:Name="TestHint" TextWrapping="Wrap" Margin="0,4,0,8"
+                           Visibility="Collapsed" />
+                <TextBox x:Name="TestBox" Height="90" AcceptsReturn="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" IsEnabled="False" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="BackButton" Content="Back" Width="90" Height="32" Margin="0,0,8,0"
+                    Click="OnBack" />
+            <Button x:Name="NextButton" Content="Next" Width="90" Height="32" Click="OnNext"
+                    IsDefault="True" />
+            <Button x:Name="FinishButton" Content="Finish" Width="90" Height="32"
+                    Click="OnFinish" Visibility="Collapsed" />
+        </StackPanel>
+    </Grid>
+</Window>
