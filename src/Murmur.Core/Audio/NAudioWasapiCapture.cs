@@ -7,6 +7,11 @@ namespace Murmur.Core.Audio;
 /// <summary>
 /// Microphone capture via WASAPI (NAudio). Buffers audio between start and stop, then
 /// converts it to the mono 16 kHz float format Whisper expects.
+///
+/// The underlying <see cref="WasapiCapture"/> is created once and reused across takes (only
+/// recording is started/stopped), so the audio client is not re-initialised on every hotkey
+/// press — recording begins fast enough to catch the first word. The mic is still only active
+/// while actually recording. It is rebuilt automatically if the selected device changes.
 /// </summary>
 public sealed class NAudioWasapiCapture : IAudioCapture
 {
@@ -16,6 +21,7 @@ public sealed class NAudioWasapiCapture : IAudioCapture
     private readonly object _sync = new();
 
     private WasapiCapture? _capture;
+    private string? _boundDeviceId;
     private MemoryStream? _buffer;
     private WaveFormat? _captureFormat;
     private TaskCompletionSource<bool>? _stopped;
@@ -38,6 +44,30 @@ public sealed class NAudioWasapiCapture : IAudioCapture
     /// <inheritdoc />
     public bool IsCapturing { get; private set; }
 
+    /// <summary>
+    /// Resolves and creates the capture device ahead of the first hotkey press so that the
+    /// first recording starts quickly. Safe to call at startup; never throws.
+    /// </summary>
+    public void Prewarm()
+    {
+        lock (_sync)
+        {
+            if (IsCapturing)
+            {
+                return;
+            }
+
+            try
+            {
+                EnsureCaptureLocked();
+            }
+            catch
+            {
+                // Best-effort warm-up; a real failure will surface on the first StartAsync.
+            }
+        }
+    }
+
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -48,14 +78,11 @@ public sealed class NAudioWasapiCapture : IAudioCapture
                 return Task.CompletedTask;
             }
 
-            _capture = CreateCapture();
-            _captureFormat = _capture.WaveFormat;
+            EnsureCaptureLocked();
             _buffer = new MemoryStream();
             _stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            _capture.DataAvailable += OnDataAvailable;
-            _capture.RecordingStopped += OnRecordingStopped;
-            _capture.StartRecording();
+            StartRecordingWithRetryLocked();
             IsCapturing = true;
         }
 
@@ -93,10 +120,8 @@ public sealed class NAudioWasapiCapture : IAudioCapture
             raw = _buffer?.ToArray() ?? Array.Empty<byte>();
             format = _captureFormat!;
 
-            capture.DataAvailable -= OnDataAvailable;
-            capture.RecordingStopped -= OnRecordingStopped;
-            capture.Dispose();
-            _capture = null;
+            // Keep the capture instance (and its initialised audio client) for the next take;
+            // only the per-take buffer is released here.
             _buffer?.Dispose();
             _buffer = null;
         }
@@ -104,28 +129,72 @@ public sealed class NAudioWasapiCapture : IAudioCapture
         return raw.Length == 0 ? Array.Empty<float>() : ConvertToMono16k(raw, format);
     }
 
-    private WasapiCapture CreateCapture()
+    /// <summary>Creates the reusable capture for the current device, rebuilding it if the device changed.</summary>
+    private void EnsureCaptureLocked()
+    {
+        var desiredId = _deviceIdProvider();
+        if (_capture is not null && _boundDeviceId == desiredId)
+        {
+            return;
+        }
+
+        DisposeCaptureLocked();
+
+        var device = ResolveDevice(desiredId);
+        var capture = new WasapiCapture(device);
+        capture.DataAvailable += OnDataAvailable;
+        capture.RecordingStopped += OnRecordingStopped;
+
+        _capture = capture;
+        _captureFormat = capture.WaveFormat;
+        _boundDeviceId = desiredId;
+    }
+
+    private void StartRecordingWithRetryLocked()
+    {
+        try
+        {
+            _capture!.StartRecording();
+        }
+        catch
+        {
+            // Reusing an instance can fail if the device was lost; rebuild once and retry.
+            DisposeCaptureLocked();
+            EnsureCaptureLocked();
+            _capture!.StartRecording();
+        }
+    }
+
+    private void DisposeCaptureLocked()
+    {
+        if (_capture is null)
+        {
+            return;
+        }
+
+        _capture.DataAvailable -= OnDataAvailable;
+        _capture.RecordingStopped -= OnRecordingStopped;
+        _capture.Dispose();
+        _capture = null;
+        _boundDeviceId = null;
+    }
+
+    private static MMDevice ResolveDevice(string? deviceId)
     {
         using var enumerator = new MMDeviceEnumerator();
-        var deviceId = _deviceIdProvider();
-        MMDevice device;
         if (!string.IsNullOrEmpty(deviceId))
         {
             try
             {
-                device = enumerator.GetDevice(deviceId);
+                return enumerator.GetDevice(deviceId);
             }
             catch
             {
-                device = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+                // Fall through to the default device if the saved id is no longer valid.
             }
         }
-        else
-        {
-            device = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
-        }
 
-        return new WasapiCapture(device);
+        return enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
     }
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
@@ -200,8 +269,7 @@ public sealed class NAudioWasapiCapture : IAudioCapture
     {
         lock (_sync)
         {
-            _capture?.Dispose();
-            _capture = null;
+            DisposeCaptureLocked();
             _buffer?.Dispose();
             _buffer = null;
         }

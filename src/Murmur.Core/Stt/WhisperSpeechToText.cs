@@ -64,22 +64,24 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
 
         var factory = await EnsureFactoryAsync(cancellationToken).ConfigureAwait(false);
         var language = _languageProvider();
-        if (string.IsNullOrWhiteSpace(language))
-        {
-            language = "auto";
-        }
 
-        await using var processor = factory.CreateBuilder()
-            .WithLanguage(language)
-            .Build();
+        // "auto" (or unset) → let Whisper detect the spoken language and transcribe in it;
+        // otherwise force the chosen language. Transcribe (not translate), so the output is in
+        // the same language that was spoken.
+        var processorBuilder = factory.CreateBuilder();
+        processorBuilder = string.IsNullOrWhiteSpace(language) || language.Equals("auto", StringComparison.OrdinalIgnoreCase)
+            ? processorBuilder.WithLanguageDetection()
+            : processorBuilder.WithLanguage(language);
 
-        var builder = new StringBuilder();
+        await using var processor = processorBuilder.Build();
+
+        var text = new StringBuilder();
         await foreach (var segment in processor.ProcessAsync(samples, cancellationToken).ConfigureAwait(false))
         {
-            builder.Append(segment.Text);
+            text.Append(segment.Text);
         }
 
-        return builder.ToString().Trim();
+        return text.ToString().Trim();
     }
 
     private async Task<WhisperFactory> EnsureFactoryAsync(CancellationToken cancellationToken)

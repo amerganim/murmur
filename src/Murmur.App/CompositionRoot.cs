@@ -55,6 +55,7 @@ public sealed class CompositionRoot : IDisposable
         // Microphone, hotkey key, mode, language and delays are all read live via these
         // closures, so a settings change takes effect without rebuilding the pipeline.
         var capture = new NAudioWasapiCapture(() => _settings.MicrophoneDeviceId);
+        capture.Prewarm();
 
         var clipboardInjector = new ClipboardPasteInjector(
             new Win32ClipboardAccess(),
