@@ -1,0 +1,109 @@
+using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Controls;
+using Murmur.Core.Audio;
+using Murmur.Core.Settings;
+
+namespace Murmur.App;
+
+/// <summary>
+/// Settings dialog: hotkey, activation mode, microphone, model, language, and start-with-Windows.
+/// Edits the supplied <see cref="MurmurSettings"/> in place only when the user clicks Save
+/// (Cancel leaves it untouched). The caller is responsible for persisting and applying changes.
+/// </summary>
+public partial class SettingsWindow : Window
+{
+    private readonly MurmurSettings _settings;
+    private readonly string _originalModel;
+
+    public SettingsWindow(MurmurSettings settings, IReadOnlyList<AudioDeviceInfo> devices)
+    {
+        _settings = settings;
+        _originalModel = settings.ModelName;
+
+        InitializeComponent();
+
+        HotkeyCombo.ItemsSource = HotkeyOptions.All;
+        HotkeyCombo.SelectedItem = FindOption(HotkeyOptions.All, settings.HotkeyVirtualKey)
+            ?? HotkeyOptions.All[0];
+
+        ModeCombo.ItemsSource = new[]
+        {
+            new NamedOption<HotkeyMode>("Push to talk (hold)", HotkeyMode.PushToTalk),
+            new NamedOption<HotkeyMode>("Toggle (press to start/stop)", HotkeyMode.Toggle),
+        };
+        ModeCombo.SelectedIndex = settings.HotkeyMode == HotkeyMode.Toggle ? 1 : 0;
+
+        MicCombo.ItemsSource = devices;
+        MicCombo.SelectedItem = SelectDevice(devices, settings.MicrophoneDeviceId);
+
+        ModelCombo.ItemsSource = ModelOptions.All;
+        ModelCombo.SelectedItem = FindOption(ModelOptions.All, settings.ModelName)
+            ?? ModelOptions.All[1];
+
+        LanguageCombo.ItemsSource = LanguageOptions.All;
+        LanguageCombo.SelectedItem = FindOption(LanguageOptions.All, settings.Language)
+            ?? LanguageOptions.All[0];
+
+        AutoStartCheck.IsChecked = settings.StartWithWindows;
+
+        ModelCombo.SelectionChanged += OnModelSelectionChanged;
+    }
+
+    /// <summary>True when the saved model differs from the one in effect when the dialog opened.</summary>
+    public bool ModelChanged { get; private set; }
+
+    private void OnModelSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var selected = (ModelCombo.SelectedItem as NamedOption<string>)?.Value;
+        var changing = selected is not null && selected != _originalModel;
+        ModelHint.Visibility = changing ? Visibility.Visible : Visibility.Collapsed;
+        if (changing)
+        {
+            ModelHint.Text = "Murmur will download the new model the next time you dictate. "
+                + "Larger models take longer to download and to transcribe.";
+        }
+    }
+
+    private void OnSave(object sender, RoutedEventArgs e)
+    {
+        _settings.HotkeyVirtualKey = ((NamedOption<int>)HotkeyCombo.SelectedItem).Value;
+        _settings.HotkeyMode = ((NamedOption<HotkeyMode>)ModeCombo.SelectedItem).Value;
+        _settings.MicrophoneDeviceId = (MicCombo.SelectedItem as AudioDeviceInfo)?.Id;
+
+        var chosenModel = ((NamedOption<string>)ModelCombo.SelectedItem).Value;
+        ModelChanged = chosenModel != _originalModel;
+        _settings.ModelName = chosenModel;
+
+        _settings.Language = ((NamedOption<string>)LanguageCombo.SelectedItem).Value;
+        _settings.StartWithWindows = AutoStartCheck.IsChecked == true;
+
+        DialogResult = true;
+    }
+
+    private static NamedOption<T>? FindOption<T>(IReadOnlyList<NamedOption<T>> options, T value)
+    {
+        foreach (var option in options)
+        {
+            if (EqualityComparer<T>.Default.Equals(option.Value, value))
+            {
+                return option;
+            }
+        }
+
+        return null;
+    }
+
+    private static AudioDeviceInfo? SelectDevice(IReadOnlyList<AudioDeviceInfo> devices, string? id)
+    {
+        foreach (var device in devices)
+        {
+            if (device.Id == id)
+            {
+                return device;
+            }
+        }
+
+        return devices.Count > 0 ? devices[0] : null;
+    }
+}

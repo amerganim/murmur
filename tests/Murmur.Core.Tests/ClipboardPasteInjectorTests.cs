@@ -120,6 +120,24 @@ public sealed class ClipboardPasteInjectorTests
     }
 
     [Fact]
+    public async Task Inject_IntoTerminal_UsesCtrlShiftV()
+    {
+        var clipboard = new FakeClipboardAccess { Current = "original" };
+        var keystroke = new FakeKeystrokeSender();
+        var injector = new ClipboardPasteInjector(
+            clipboard,
+            keystroke,
+            new ImmediateDelayProvider(),
+            () => 150,
+            () => new[] { "WindowsTerminal", "cmd" });
+
+        await injector.InjectAsync("ls -la", foregroundProcessName: "WindowsTerminal");
+
+        Assert.Single(keystroke.PasteChords);
+        Assert.Equal(PasteChord.CtrlShiftV, keystroke.PasteChords[0]);
+    }
+
+    [Fact]
     public async Task Inject_WhenPasteSendFails_RestoresClipboardAndReportsFailure()
     {
         var clipboard = new FakeClipboardAccess { Current = "original" };

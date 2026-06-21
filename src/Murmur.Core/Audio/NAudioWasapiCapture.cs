@@ -12,7 +12,7 @@ public sealed class NAudioWasapiCapture : IAudioCapture
 {
     private const int TargetSampleRate = 16000;
 
-    private readonly string? _deviceId;
+    private readonly Func<string?> _deviceIdProvider;
     private readonly object _sync = new();
 
     private WasapiCapture? _capture;
@@ -21,8 +21,18 @@ public sealed class NAudioWasapiCapture : IAudioCapture
     private TaskCompletionSource<bool>? _stopped;
 
     public NAudioWasapiCapture(string? deviceId = null)
+        : this(() => deviceId)
     {
-        _deviceId = deviceId;
+    }
+
+    /// <summary>
+    /// Creates a capture whose device is resolved at each recording start via
+    /// <paramref name="deviceIdProvider"/>, so a settings change takes effect on the next take
+    /// without rebuilding the capture.
+    /// </summary>
+    public NAudioWasapiCapture(Func<string?> deviceIdProvider)
+    {
+        _deviceIdProvider = deviceIdProvider ?? throw new ArgumentNullException(nameof(deviceIdProvider));
     }
 
     /// <inheritdoc />
@@ -97,12 +107,13 @@ public sealed class NAudioWasapiCapture : IAudioCapture
     private WasapiCapture CreateCapture()
     {
         using var enumerator = new MMDeviceEnumerator();
+        var deviceId = _deviceIdProvider();
         MMDevice device;
-        if (!string.IsNullOrEmpty(_deviceId))
+        if (!string.IsNullOrEmpty(deviceId))
         {
             try
             {
-                device = enumerator.GetDevice(_deviceId);
+                device = enumerator.GetDevice(deviceId);
             }
             catch
             {

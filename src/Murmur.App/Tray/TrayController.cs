@@ -20,6 +20,9 @@ public sealed class TrayController : IDisposable
     /// <summary>Raised when the user chooses Exit from the tray menu.</summary>
     public event EventHandler? ExitRequested;
 
+    /// <summary>Raised when the user chooses Settings from the tray menu.</summary>
+    public event EventHandler? SettingsRequested;
+
     public TrayController()
     {
         _icon = new TaskbarIcon
@@ -61,6 +64,10 @@ public sealed class TrayController : IDisposable
         var header = new MenuItem { Header = "Murmur", IsEnabled = false };
         menu.Items.Add(header);
         menu.Items.Add(new Separator());
+
+        var settings = new MenuItem { Header = "Settings…" };
+        settings.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(settings);
 
         var exit = new MenuItem { Header = "Exit" };
         exit.Click += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);

@@ -36,6 +36,24 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
     public Task WarmUpAsync(CancellationToken cancellationToken = default)
         => EnsureFactoryAsync(cancellationToken);
 
+    /// <summary>
+    /// Unloads the cached model so the next warm-up / transcription reloads using the current
+    /// model name. Call after the user switches models in settings.
+    /// </summary>
+    public async Task ResetAsync(CancellationToken cancellationToken = default)
+    {
+        await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _factory?.Dispose();
+            _factory = null;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+    }
+
     /// <inheritdoc />
     public async Task<string> TranscribeAsync(float[] samples, CancellationToken cancellationToken = default)
     {

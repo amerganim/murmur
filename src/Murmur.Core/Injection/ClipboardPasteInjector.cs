@@ -16,18 +16,22 @@ public sealed class ClipboardPasteInjector : ITextInjector
     private readonly IKeystrokeSender _keystroke;
     private readonly IDelayProvider _delay;
     private readonly Func<int> _restoreDelayMsProvider;
+    private readonly Func<IReadOnlyCollection<string>> _terminalProcessNamesProvider;
 
     public ClipboardPasteInjector(
         IClipboardAccess clipboard,
         IKeystrokeSender keystroke,
         IDelayProvider delay,
-        Func<int> restoreDelayMsProvider)
+        Func<int> restoreDelayMsProvider,
+        Func<IReadOnlyCollection<string>>? terminalProcessNamesProvider = null)
     {
         _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
         _keystroke = keystroke ?? throw new ArgumentNullException(nameof(keystroke));
         _delay = delay ?? throw new ArgumentNullException(nameof(delay));
         _restoreDelayMsProvider = restoreDelayMsProvider
             ?? throw new ArgumentNullException(nameof(restoreDelayMsProvider));
+        _terminalProcessNamesProvider = terminalProcessNamesProvider
+            ?? (static () => Array.Empty<string>());
     }
 
     /// <inheritdoc />
@@ -89,10 +93,11 @@ public sealed class ClipboardPasteInjector : ITextInjector
     }
 
     /// <summary>
-    /// Chooses the paste chord for the given foreground process. Terminals need
-    /// Ctrl+Shift+V; that per-app switch lands in Milestone 2. This is the extension point.
+    /// Chooses the paste chord for the given foreground process: terminals get Ctrl+Shift+V,
+    /// everything else the standard Ctrl+V. The terminal set is configurable via settings.
     /// </summary>
-    private static PasteChord ResolvePasteChord(string? foregroundProcessName) => PasteChord.CtrlV;
+    private PasteChord ResolvePasteChord(string? foregroundProcessName)
+        => PasteChordResolver.Resolve(foregroundProcessName, _terminalProcessNamesProvider());
 
     private string? TryGetClipboardText()
     {

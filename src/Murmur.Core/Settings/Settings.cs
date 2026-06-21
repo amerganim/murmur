@@ -18,6 +18,14 @@ public sealed class MurmurSettings
     /// <summary>How the hotkey drives recording. Defaults to push-to-talk.</summary>
     public HotkeyMode HotkeyMode { get; set; } = HotkeyMode.PushToTalk;
 
+    /// <summary>Whether Murmur launches automatically when the user signs in. Defaults to off.</summary>
+    public bool StartWithWindows { get; set; }
+
+    /// <summary>
+    /// Whether the first-run wizard has completed. Used to show the wizard only once.
+    /// </summary>
+    public bool FirstRunCompleted { get; set; }
+
     /// <summary>
     /// NAudio/WASAPI capture device id, or <c>null</c> to use the system default microphone.
     /// </summary>
@@ -44,6 +52,28 @@ public sealed class MurmurSettings
     /// Defaults to 50 ms.
     /// </summary>
     public int PostKeyUpDelayMs { get; set; } = 50;
+
+    /// <summary>
+    /// Foreground process names (without extension, case-insensitive) that should be pasted
+    /// into with Ctrl+Shift+V instead of Ctrl+V, because plain Ctrl+V is reserved in
+    /// terminals. VS Code (<c>Code</c>) is deliberately excluded: Ctrl+Shift+V opens the
+    /// Markdown preview in its editor, so it stays on Ctrl+V; add it here if you only ever
+    /// dictate into its integrated terminal.
+    /// </summary>
+    public List<string> TerminalProcessNames { get; set; } = new()
+    {
+        "WindowsTerminal",
+        "WindowsTerminalPreview",
+        "cmd",
+        "powershell",
+        "pwsh",
+        "conhost",
+        "OpenConsole",
+        "putty",
+        "mintty",
+        "wezterm-gui",
+        "alacritty",
+    };
 
     /// <summary>
     /// Catches any JSON fields not mapped above so unknown/future settings written by a
