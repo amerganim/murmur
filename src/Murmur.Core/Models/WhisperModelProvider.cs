@@ -56,12 +56,23 @@ public sealed class WhisperModelProvider : IModelProvider
         }
 
         Directory.CreateDirectory(_modelsDirectory);
-        var temp = destination + ".download";
+
+        // Unique temp name per attempt so a leftover partial file or a second instance can
+        // never lock the same download target.
+        var temp = $"{destination}.{Guid.NewGuid():N}.download";
 
         try
         {
             await DownloadAsync(BaseUrl + modelName + ".bin", temp, progress, cancellationToken)
                 .ConfigureAwait(false);
+
+            // Another instance may have finished the download while we were going; if so,
+            // keep theirs and discard ours rather than fighting over the file.
+            if (File.Exists(destination) && new FileInfo(destination).Length > 0)
+            {
+                TryDelete(temp);
+                return destination;
+            }
 
             File.Move(temp, destination, overwrite: true);
             return destination;
