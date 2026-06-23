@@ -52,8 +52,17 @@
             <ComboBox Grid.Row="4" Grid.Column="1" x:Name="LanguageCombo" />
         </Grid>
 
-        <CheckBox x:Name="AutoStartCheck" Content="Start Murmur when I sign in to Windows"
+        <CheckBox x:Name="TrimSilenceCheck"
+                  Content="Trim silence before transcribing (faster, recommended)"
                   Margin="0,16,0,0" />
+
+        <TextBlock Text="Custom words (names, jargon) — helps Murmur spell them right"
+                   Margin="0,14,0,2" />
+        <TextBox x:Name="CustomWordsBox" Height="48" AcceptsReturn="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" />
+
+        <CheckBox x:Name="AutoStartCheck" Content="Start Murmur when I sign in to Windows"
+                  Margin="0,14,0,0" />
 
         <TextBlock x:Name="ModelHint" Foreground="#B06000" TextWrapping="Wrap"
                    Margin="0,12,0,0" Visibility="Collapsed" />

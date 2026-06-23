@@ -47,6 +47,18 @@ public sealed class MurmurSettings
     public string Language { get; set; } = "auto";
 
     /// <summary>
+    /// Trim leading/trailing silence before transcription. Speeds up transcription and reduces
+    /// hallucinations on silent stretches. On by default.
+    /// </summary>
+    public bool TrimSilence { get; set; } = true;
+
+    /// <summary>
+    /// Optional custom words/names/jargon fed to Whisper as an initial prompt to bias
+    /// transcription (e.g. product names). Empty by default.
+    /// </summary>
+    public string CustomVocabulary { get; set; } = string.Empty;
+
+    /// <summary>
     /// Delay before the original clipboard contents are restored after a paste, in
     /// milliseconds. Must be long enough for the target app to complete the paste;
     /// restoring synchronously corrupts the user's clipboard. Defaults to 150 ms.

@@ -49,7 +49,9 @@ public sealed class CompositionRoot : IDisposable
         var speechToText = new WhisperSpeechToText(
             _modelProvider,
             () => _settings.ModelName,
-            () => _settings.Language);
+            () => _settings.Language,
+            () => _settings.TrimSilence,
+            () => _settings.CustomVocabulary);
         _speechToText = speechToText;
 
         // Microphone, hotkey key, mode, language and delays are all read live via these

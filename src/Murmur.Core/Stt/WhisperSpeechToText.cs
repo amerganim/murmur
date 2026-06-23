@@ -14,6 +14,8 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
     private readonly IModelProvider _modelProvider;
     private readonly Func<string> _modelNameProvider;
     private readonly Func<string> _languageProvider;
+    private readonly Func<bool> _trimSilenceProvider;
+    private readonly Func<string> _promptProvider;
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
     private WhisperFactory? _factory;
@@ -22,11 +24,15 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
     public WhisperSpeechToText(
         IModelProvider modelProvider,
         Func<string> modelNameProvider,
-        Func<string> languageProvider)
+        Func<string> languageProvider,
+        Func<bool>? trimSilenceProvider = null,
+        Func<string>? promptProvider = null)
     {
         _modelProvider = modelProvider ?? throw new ArgumentNullException(nameof(modelProvider));
         _modelNameProvider = modelNameProvider ?? throw new ArgumentNullException(nameof(modelNameProvider));
         _languageProvider = languageProvider ?? throw new ArgumentNullException(nameof(languageProvider));
+        _trimSilenceProvider = trimSilenceProvider ?? (static () => true);
+        _promptProvider = promptProvider ?? (static () => string.Empty);
     }
 
     /// <summary>
@@ -62,7 +68,13 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
             return string.Empty;
         }
 
-        // Boost quiet mic input to a healthy level — Whisper hallucinates on near-silent audio.
+        // Trim silent head/tail (faster, fewer hallucinations), then boost quiet input —
+        // Whisper hallucinates on near-silent audio.
+        if (_trimSilenceProvider())
+        {
+            samples = Audio.SilenceTrimmer.Trim(samples);
+        }
+
         samples = Audio.AudioPreprocessor.Normalize(samples);
 
         var factory = await EnsureFactoryAsync(cancellationToken).ConfigureAwait(false);
@@ -75,6 +87,13 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
         processorBuilder = string.IsNullOrWhiteSpace(language) || language.Equals("auto", StringComparison.OrdinalIgnoreCase)
             ? processorBuilder.WithLanguageDetection()
             : processorBuilder.WithLanguage(language);
+
+        // Bias transcription toward the user's custom words/names/jargon.
+        var prompt = _promptProvider();
+        if (!string.IsNullOrWhiteSpace(prompt))
+        {
+            processorBuilder = processorBuilder.WithPrompt(prompt);
+        }
 
         await using var processor = processorBuilder.Build();
 

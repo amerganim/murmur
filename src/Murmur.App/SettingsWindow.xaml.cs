@@ -45,6 +45,8 @@ public partial class SettingsWindow : Window
         LanguageCombo.SelectedItem = FindOption(LanguageOptions.All, settings.Language)
             ?? LanguageOptions.All[0];
 
+        TrimSilenceCheck.IsChecked = settings.TrimSilence;
+        CustomWordsBox.Text = settings.CustomVocabulary;
         AutoStartCheck.IsChecked = settings.StartWithWindows;
 
         ModelCombo.SelectionChanged += OnModelSelectionChanged;
@@ -91,6 +93,8 @@ public partial class SettingsWindow : Window
         _settings.ModelName = chosenModel;
 
         _settings.Language = ((NamedOption<string>)LanguageCombo.SelectedItem).Value;
+        _settings.TrimSilence = TrimSilenceCheck.IsChecked == true;
+        _settings.CustomVocabulary = CustomWordsBox.Text.Trim();
         _settings.StartWithWindows = AutoStartCheck.IsChecked == true;
 
         DialogResult = true;
