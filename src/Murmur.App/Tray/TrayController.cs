@@ -24,6 +24,9 @@ public sealed class TrayController : IDisposable
     /// <summary>Raised when the user chooses Settings from the tray menu.</summary>
     public event EventHandler? SettingsRequested;
 
+    /// <summary>Raised when the user chooses Voice Shortcuts from the tray menu.</summary>
+    public event EventHandler? SnippetsRequested;
+
     /// <summary>Raised when the user chooses "Restart as administrator".</summary>
     public event EventHandler? RestartAsAdminRequested;
 
@@ -92,6 +95,10 @@ public sealed class TrayController : IDisposable
         var settings = new MenuItem { Header = "Settings…" };
         settings.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
         menu.Items.Add(settings);
+
+        var snippets = new MenuItem { Header = "Voice shortcuts…" };
+        snippets.Click += (_, _) => SnippetsRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(snippets);
 
         if (!_isElevated)
         {

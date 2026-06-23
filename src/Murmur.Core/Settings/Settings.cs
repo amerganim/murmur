@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Murmur.Core.Text;
 
 namespace Murmur.Core.Settings;
 
@@ -57,6 +58,17 @@ public sealed class MurmurSettings
     /// transcription (e.g. product names). Empty by default.
     /// </summary>
     public string CustomVocabulary { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Voice shortcuts: saying a trigger phrase types its expansion instead. Empty by default.
+    /// </summary>
+    public List<Snippet> Snippets { get; set; } = new();
+
+    /// <summary>
+    /// Strip the trailing sentence punctuation Whisper adds when dictating into a terminal
+    /// (e.g. "ls -la." → "ls -la"). On by default.
+    /// </summary>
+    public bool TerminalStripTrailingPunctuation { get; set; } = true;
 
     /// <summary>
     /// Delay before the original clipboard contents are restored after a paste, in

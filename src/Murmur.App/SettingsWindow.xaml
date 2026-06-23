@@ -56,6 +56,10 @@
                   Content="Trim silence before transcribing (faster, recommended)"
                   Margin="0,16,0,0" />
 
+        <CheckBox x:Name="TerminalPunctuationCheck"
+                  Content="Drop trailing punctuation in terminals (ls -la. → ls -la)"
+                  Margin="0,8,0,0" />
+
         <TextBlock Text="Custom words (names, jargon) — helps Murmur spell them right"
                    Margin="0,14,0,2" />
         <TextBox x:Name="CustomWordsBox" Height="48" AcceptsReturn="True" TextWrapping="Wrap"

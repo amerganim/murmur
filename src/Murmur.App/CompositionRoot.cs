@@ -43,6 +43,7 @@ public sealed class CompositionRoot : IDisposable
         _tray = new TrayController(ElevationHelper.IsElevated());
         _tray.ExitRequested += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
         _tray.SettingsRequested += (_, _) => OpenSettings();
+        _tray.SnippetsRequested += (_, _) => OpenSnippets();
         _tray.RestartAsAdminRequested += (_, _) => RestartAsAdminRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -155,6 +156,16 @@ public sealed class CompositionRoot : IDisposable
         finally
         {
             _settingsOpen = false;
+        }
+    }
+
+    private void OpenSnippets()
+    {
+        var window = new SnippetsWindow(_settings.Snippets);
+        if (window.ShowDialog() == true && window.Result is not null)
+        {
+            _settings.Snippets = window.Result;
+            _ = _settingsStore.SaveAsync(_settings);
         }
     }
 

@@ -46,6 +46,7 @@ public partial class SettingsWindow : Window
             ?? LanguageOptions.All[0];
 
         TrimSilenceCheck.IsChecked = settings.TrimSilence;
+        TerminalPunctuationCheck.IsChecked = settings.TerminalStripTrailingPunctuation;
         CustomWordsBox.Text = settings.CustomVocabulary;
         AutoStartCheck.IsChecked = settings.StartWithWindows;
 
@@ -94,6 +95,7 @@ public partial class SettingsWindow : Window
 
         _settings.Language = ((NamedOption<string>)LanguageCombo.SelectedItem).Value;
         _settings.TrimSilence = TrimSilenceCheck.IsChecked == true;
+        _settings.TerminalStripTrailingPunctuation = TerminalPunctuationCheck.IsChecked == true;
         _settings.CustomVocabulary = CustomWordsBox.Text.Trim();
         _settings.StartWithWindows = AutoStartCheck.IsChecked == true;
 

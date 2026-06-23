@@ -158,6 +158,14 @@ public sealed class RecordingController : IDisposable
                 return;
             }
 
+            // Voice shortcuts: replace a whole-utterance trigger with its expansion.
+            var settings = _settings();
+            text = Murmur.Core.Text.SnippetExpander.Expand(text, settings.Snippets);
+
+            // Per-app formatting (e.g. drop trailing punctuation in terminals).
+            text = Murmur.Core.Text.TranscriptFormatter.Format(
+                text, processName, settings.TerminalProcessNames, settings.TerminalStripTrailingPunctuation);
+
             var result = await _injectorChain.InjectAsync(text, processName);
             if (!result.Success)
             {
