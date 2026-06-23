@@ -27,6 +27,13 @@ public sealed class MurmurSettings
     public bool FirstRunCompleted { get; set; }
 
     /// <summary>
+    /// When true, the most recent captured audio is written to
+    /// <c>%AppData%\Murmur\last-recording.wav</c> (overwritten each time) for troubleshooting
+    /// transcription quality. Local only; off by default.
+    /// </summary>
+    public bool SaveDiagnosticRecording { get; set; }
+
+    /// <summary>
     /// NAudio/WASAPI capture device id, or <c>null</c> to use the system default microphone.
     /// </summary>
     public string? MicrophoneDeviceId { get; set; }

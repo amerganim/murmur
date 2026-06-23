@@ -62,6 +62,9 @@ public sealed class WhisperSpeechToText : ISpeechToText, IDisposable
             return string.Empty;
         }
 
+        // Boost quiet mic input to a healthy level — Whisper hallucinates on near-silent audio.
+        samples = Audio.AudioPreprocessor.Normalize(samples);
+
         var factory = await EnsureFactoryAsync(cancellationToken).ConfigureAwait(false);
         var language = _languageProvider();
 

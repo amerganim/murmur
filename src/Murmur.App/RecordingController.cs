@@ -146,6 +146,11 @@ public sealed class RecordingController : IDisposable
                 return;
             }
 
+            if (_settings().SaveDiagnosticRecording)
+            {
+                TrySaveDiagnosticRecording(samples);
+            }
+
             var text = await _speechToText.TranscribeAsync(samples);
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -163,6 +168,22 @@ public sealed class RecordingController : IDisposable
         {
             _state = State.Idle;
             _tray.SetState(TrayState.Idle);
+        }
+    }
+
+    private static void TrySaveDiagnosticRecording(float[] samples)
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Murmur");
+            System.IO.Directory.CreateDirectory(dir);
+            Murmur.Core.Audio.WavFile.WriteMono16k(
+                System.IO.Path.Combine(dir, "last-recording.wav"), samples);
+        }
+        catch
+        {
+            // Diagnostics are best-effort; never disrupt dictation.
         }
     }
 
