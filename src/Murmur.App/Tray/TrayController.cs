@@ -24,12 +24,18 @@ public sealed class TrayController : IDisposable
     /// <summary>Raised when the user chooses Settings from the tray menu.</summary>
     public event EventHandler? SettingsRequested;
 
-    public TrayController()
+    /// <summary>Raised when the user chooses "Restart as administrator".</summary>
+    public event EventHandler? RestartAsAdminRequested;
+
+    private readonly bool _isElevated;
+
+    public TrayController(bool isElevated = false)
     {
+        _isElevated = isElevated;
         _icon = new TaskbarIcon
         {
             IconSource = _idleIcon,
-            ToolTipText = "Murmur — ready",
+            ToolTipText = isElevated ? "Murmur — ready (Administrator)" : "Murmur — ready",
             ContextMenu = BuildContextMenu(),
         };
 
@@ -75,13 +81,24 @@ public sealed class TrayController : IDisposable
     {
         var menu = new ContextMenu();
 
-        var header = new MenuItem { Header = "Murmur", IsEnabled = false };
+        var header = new MenuItem
+        {
+            Header = _isElevated ? "Murmur (Administrator)" : "Murmur",
+            IsEnabled = false,
+        };
         menu.Items.Add(header);
         menu.Items.Add(new Separator());
 
         var settings = new MenuItem { Header = "Settings…" };
         settings.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
         menu.Items.Add(settings);
+
+        if (!_isElevated)
+        {
+            var elevate = new MenuItem { Header = "Restart as administrator" };
+            elevate.Click += (_, _) => RestartAsAdminRequested?.Invoke(this, EventArgs.Empty);
+            menu.Items.Add(elevate);
+        }
 
         var exit = new MenuItem { Header = "Exit" };
         exit.Click += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);

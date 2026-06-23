@@ -32,14 +32,18 @@ public sealed class CompositionRoot : IDisposable
     /// <summary>Raised when the user requests exit (from the tray menu).</summary>
     public event EventHandler? ExitRequested;
 
+    /// <summary>Raised when the user asks to restart Murmur as administrator.</summary>
+    public event EventHandler? RestartAsAdminRequested;
+
     public CompositionRoot()
     {
         _settingsStore = new JsonSettingsStore();
         _settings = _settingsStore.Load();
 
-        _tray = new TrayController();
+        _tray = new TrayController(ElevationHelper.IsElevated());
         _tray.ExitRequested += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
         _tray.SettingsRequested += (_, _) => OpenSettings();
+        _tray.RestartAsAdminRequested += (_, _) => RestartAsAdminRequested?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Builds the loop, starts listening for the hotkey, and ensures the model is ready.</summary>

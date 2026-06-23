@@ -21,9 +21,18 @@ public partial class App : Application
 
         // Murmur is a tray app, so an old instance can linger after a terminal closes.
         // Refuse to start a second one — two instances would fight over the model download
-        // and the global hotkey.
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var isNew);
-        if (!isNew)
+        // and the global hotkey. When relaunching elevated we pass --wait-mutex so the new
+        // instance briefly waits for the old one to exit and release the lock.
+        var waitForMutex = e.Args.Contains("--wait-mutex");
+        _singleInstanceMutex = new Mutex(initiallyOwned: false, SingleInstanceMutexName);
+
+        var acquired = _singleInstanceMutex.WaitOne(TimeSpan.Zero);
+        if (!acquired && waitForMutex)
+        {
+            acquired = _singleInstanceMutex.WaitOne(TimeSpan.FromSeconds(8));
+        }
+
+        if (!acquired)
         {
             MessageBox.Show(
                 "Murmur is already running. Look for its icon in the system tray.",
@@ -36,13 +45,44 @@ public partial class App : Application
 
         _root = new CompositionRoot();
         _root.ExitRequested += (_, _) => Shutdown();
+        _root.RestartAsAdminRequested += OnRestartAsAdminRequested;
         _root.Start();
+    }
+
+    private void OnRestartAsAdminRequested(object? sender, EventArgs e)
+    {
+        if (ElevationHelper.TryRestartElevated())
+        {
+            // Release the single-instance lock so the elevated instance can take over, then exit.
+            Shutdown();
+        }
+        else
+        {
+            MessageBox.Show(
+                "Murmur could not restart as administrator (the prompt may have been cancelled).",
+                "Murmur",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         _root?.Dispose();
-        _singleInstanceMutex?.Dispose();
+        if (_singleInstanceMutex is not null)
+        {
+            try
+            {
+                _singleInstanceMutex.ReleaseMutex();
+            }
+            catch (ApplicationException)
+            {
+                // Not the owner (never acquired) — nothing to release.
+            }
+
+            _singleInstanceMutex.Dispose();
+        }
+
         base.OnExit(e);
     }
 }
