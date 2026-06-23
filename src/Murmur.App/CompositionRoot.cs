@@ -59,13 +59,23 @@ public sealed class CompositionRoot : IDisposable
         var capture = new NAudioWasapiCapture(() => _settings.MicrophoneDeviceId);
         capture.Prewarm();
 
+        var keystrokeSender = new SendInputKeystrokeSender();
         var clipboardInjector = new ClipboardPasteInjector(
             new Win32ClipboardAccess(),
-            new SendInputKeystrokeSender(),
+            keystrokeSender,
             new TaskDelayProvider(),
             () => _settings.ClipboardRestoreDelayMs,
             () => _settings.TerminalProcessNames);
-        var injectorChain = new TextInjectorChain(new ITextInjector[] { clipboardInjector });
+
+        // Fallback chain: clipboard paste (fast, at-cursor) first; if it throws, try UI
+        // Automation (clean direct insert into empty fields), then synthesize the text
+        // character-by-character, which works where paste is blocked.
+        var injectorChain = new TextInjectorChain(new ITextInjector[]
+        {
+            clipboardInjector,
+            new UiaInjector(),
+            new SendInputUnicodeInjector(keystrokeSender),
+        });
 
         _hotkey = new LowLevelKeyboardHookService(_settings.HotkeyVirtualKey);
 
