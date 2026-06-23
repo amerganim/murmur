@@ -43,10 +43,11 @@ public static class ModelOptions
     public static IReadOnlyList<NamedOption<string>> All { get; } = new[]
     {
         new NamedOption<string>("Tiny — fastest, least accurate (~75 MB)", "ggml-tiny"),
-        new NamedOption<string>("Base — fast, good for most uses (~145 MB)", "ggml-base"),
-        new NamedOption<string>("Small — slower, more accurate (~465 MB)", "ggml-small"),
-        new NamedOption<string>("Medium — slow, high accuracy (~1.5 GB)", "ggml-medium"),
-        new NamedOption<string>("Large v3 — slowest, best accuracy (~3 GB)", "ggml-large-v3"),
+        new NamedOption<string>("Base — fast, English-focused (~145 MB)", "ggml-base"),
+        new NamedOption<string>("Small — balanced; best for other languages on most PCs (~465 MB)", "ggml-small"),
+        new NamedOption<string>("Medium — very accurate, slow without a GPU (~1.5 GB)", "ggml-medium"),
+        new NamedOption<string>("Turbo (quantized) — very accurate, slow without a GPU (~574 MB)", "ggml-large-v3-turbo-q5_0"),
+        new NamedOption<string>("Large v3 — most accurate, slowest (~3 GB)", "ggml-large-v3"),
     };
 }
 

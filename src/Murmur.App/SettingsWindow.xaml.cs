@@ -53,16 +53,31 @@ public partial class SettingsWindow : Window
     /// <summary>True when the saved model differs from the one in effect when the dialog opened.</summary>
     public bool ModelChanged { get; private set; }
 
+    private static readonly HashSet<string> HeavyModels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ggml-medium", "ggml-large-v3", "ggml-large-v3-turbo", "ggml-large-v3-turbo-q5_0",
+    };
+
     private void OnModelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         var selected = (ModelCombo.SelectedItem as NamedOption<string>)?.Value;
         var changing = selected is not null && selected != _originalModel;
-        ModelHint.Visibility = changing ? Visibility.Visible : Visibility.Collapsed;
+        var heavy = selected is not null && HeavyModels.Contains(selected);
+
+        var lines = new List<string>();
         if (changing)
         {
-            ModelHint.Text = "Murmur will download the new model the next time you dictate. "
-                + "Larger models take longer to download and to transcribe.";
+            lines.Add("Murmur will download the new model the next time you dictate.");
         }
+
+        if (heavy)
+        {
+            lines.Add("This model is very accurate but can take 30+ seconds per phrase on a "
+                + "PC without a dedicated GPU. If dictation feels stuck, try Small.");
+        }
+
+        ModelHint.Text = string.Join(" ", lines);
+        ModelHint.Visibility = lines.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnSave(object sender, RoutedEventArgs e)

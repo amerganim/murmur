@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Murmur.App;
 
@@ -20,19 +22,46 @@ public partial class RecordingOverlay : Window
     private const int WsExNoActivate = 0x08000000;
     private const int WsExToolWindow = 0x00000080;
 
+    private readonly DispatcherTimer _transcribeTimer;
+    private readonly Stopwatch _transcribeStopwatch = new();
+
     public RecordingOverlay()
     {
         InitializeComponent();
+
+        // Ticks while transcribing so a slow model shows elapsed time instead of looking frozen.
+        _transcribeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _transcribeTimer.Tick += (_, _) =>
+            StatusText.Text = $"Transcribing… {_transcribeStopwatch.Elapsed.TotalSeconds:0}s";
     }
 
     /// <summary>Shows the overlay in the "listening" state (red dot).</summary>
-    public void ShowListening() => SetState("Listening…", (Color)ColorConverter.ConvertFromString("#E53935"));
+    public void ShowListening()
+    {
+        StopTranscribeTimer();
+        SetState("Listening…", (Color)ColorConverter.ConvertFromString("#E53935"));
+    }
 
-    /// <summary>Shows the overlay in the "transcribing" state (amber dot).</summary>
-    public void ShowTranscribing() => SetState("Transcribing…", (Color)ColorConverter.ConvertFromString("#FBC02D"));
+    /// <summary>Shows the overlay in the "transcribing" state (amber dot) with an elapsed timer.</summary>
+    public void ShowTranscribing()
+    {
+        SetState("Transcribing…", (Color)ColorConverter.ConvertFromString("#FBC02D"));
+        _transcribeStopwatch.Restart();
+        _transcribeTimer.Start();
+    }
 
     /// <summary>Hides the overlay.</summary>
-    public void HideOverlay() => Hide();
+    public void HideOverlay()
+    {
+        StopTranscribeTimer();
+        Hide();
+    }
+
+    private void StopTranscribeTimer()
+    {
+        _transcribeTimer.Stop();
+        _transcribeStopwatch.Reset();
+    }
 
     private void SetState(string text, Color dotColor)
     {
