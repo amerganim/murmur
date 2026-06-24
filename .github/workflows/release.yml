@@ -1,0 +1,75 @@
+name: Release
+
+# Builds a self-contained, single-file Windows release and attaches it to a GitHub Release.
+# Trigger by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+# Or run manually from the Actions tab (workflow_dispatch).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Test
+        run: dotnet test --configuration Release
+
+      - name: Publish (self-contained single file, win-x64)
+        run: >
+          dotnet publish src/Murmur.App/Murmur.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          $ref = "${{ github.ref_name }}"
+          if (-not $ref.StartsWith("v")) { $ref = "v0.0.0-$($env:GITHUB_SHA.Substring(0,7))" }
+          "version=$ref" >> $env:GITHUB_OUTPUT
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $zip = "Murmur-${{ steps.version.outputs.version }}-win-x64.zip"
+          Compress-Archive -Path publish/* -DestinationPath $zip
+          "ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP }}
+          generate_release_notes: true
+          name: Murmur ${{ steps.version.outputs.version }}
+          body: |
+            **Murmur ${{ steps.version.outputs.version }}** — local voice typing for Windows.
+
+            Download the zip below, extract it, and run `Murmur.App.exe`. No install required.
+            On first launch it downloads the Whisper speech model (~150 MB) to `%AppData%\Murmur`.
+
+            Windows may show a SmartScreen warning because the build is not code-signed —
+            choose **More info → Run anyway**. The app is fully local and open source.
+
+      - name: Upload artifact (for manual runs)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Murmur-win-x64
+          path: ${{ env.ZIP }}
