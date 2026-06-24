@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Murmur.App.Tray;
 using Murmur.Core.Audio;
+using Murmur.Core.Commanding;
 using Murmur.Core.Common;
 using Murmur.Core.Injection;
 using Murmur.Core.Models;
@@ -28,6 +29,15 @@ public sealed class CompositionRoot : IDisposable
     private WhisperModelProvider? _modelProvider;
     private LowLevelKeyboardHookService? _hotkey;
     private bool _settingsOpen;
+
+    // Shared with Command Mode.
+    private NAudioWasapiCapture? _capture;
+    private Win32ClipboardAccess? _clipboard;
+    private SendInputKeystrokeSender? _keystroke;
+    private TaskDelayProvider? _delay;
+    private IOllamaClient? _ollama;
+    private LowLevelKeyboardHookService? _commandHotkey;
+    private CommandModeController? _commandController;
 
     /// <summary>Raised when the user requests exit (from the tray menu).</summary>
     public event EventHandler? ExitRequested;
@@ -63,12 +73,18 @@ public sealed class CompositionRoot : IDisposable
         // closures, so a settings change takes effect without rebuilding the pipeline.
         var capture = new NAudioWasapiCapture(() => _settings.MicrophoneDeviceId);
         capture.Prewarm();
+        _capture = capture;
 
         var keystrokeSender = new SendInputKeystrokeSender();
+        _keystroke = keystrokeSender;
+        _clipboard = new Win32ClipboardAccess();
+        _delay = new TaskDelayProvider();
+        _ollama = new OllamaClient(() => _settings.OllamaEndpoint, () => _settings.OllamaModel);
+
         var clipboardInjector = new ClipboardPasteInjector(
-            new Win32ClipboardAccess(),
+            _clipboard,
             keystrokeSender,
-            new TaskDelayProvider(),
+            _delay,
             () => _settings.ClipboardRestoreDelayMs,
             () => _settings.TerminalProcessNames);
 
@@ -94,6 +110,8 @@ public sealed class CompositionRoot : IDisposable
             Application.Current.Dispatcher);
         _controller.Start();
 
+        UpdateCommandMode();
+
         if (_settings.FirstRunCompleted)
         {
             _ = EnsureModelReadyAsync();
@@ -101,6 +119,43 @@ public sealed class CompositionRoot : IDisposable
         else
         {
             RunFirstRunWizard();
+        }
+    }
+
+    /// <summary>
+    /// Builds, updates, or tears down the Command Mode controller to match the current settings,
+    /// so toggling it on/off applies without an app restart.
+    /// </summary>
+    private void UpdateCommandMode()
+    {
+        if (_settings.CommandModeEnabled)
+        {
+            if (_commandController is null)
+            {
+                _commandHotkey = new LowLevelKeyboardHookService(_settings.CommandModeHotkeyVirtualKey);
+                _commandController = new CommandModeController(
+                    _commandHotkey,
+                    _capture!,
+                    _speechToText!,
+                    _ollama!,
+                    _clipboard!,
+                    _keystroke!,
+                    _delay!,
+                    _tray,
+                    () => _settings,
+                    Application.Current.Dispatcher);
+                _commandController.Start();
+            }
+            else if (_commandHotkey is not null)
+            {
+                _commandHotkey.VirtualKey = _settings.CommandModeHotkeyVirtualKey;
+            }
+        }
+        else if (_commandController is not null)
+        {
+            _commandController.Dispose();
+            _commandController = null;
+            _commandHotkey = null;
         }
     }
 
@@ -184,6 +239,8 @@ public sealed class CompositionRoot : IDisposable
             _hotkey.VirtualKey = _settings.HotkeyVirtualKey;
         }
 
+        UpdateCommandMode();
+
         if (modelChanged && _speechToText is not null)
         {
             _ = ReloadModelAsync();
@@ -251,7 +308,9 @@ public sealed class CompositionRoot : IDisposable
 
     public void Dispose()
     {
+        _commandController?.Dispose();
         _controller?.Dispose();
+        _capture?.Dispose();
         _speechToText?.Dispose();
         _tray.Dispose();
     }

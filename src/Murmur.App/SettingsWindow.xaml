@@ -68,6 +68,26 @@
         <CheckBox x:Name="AutoStartCheck" Content="Start Murmur when I sign in to Windows"
                   Margin="0,14,0,0" />
 
+        <Separator Margin="0,16,0,8" />
+        <TextBlock Text="Command Mode (needs Ollama)" FontWeight="SemiBold" />
+        <CheckBox x:Name="CommandModeCheck"
+                  Content="Enable: hold a key, speak an instruction, rewrite selected text with local AI"
+                  Margin="0,8,0,0" />
+        <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="130" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Command hotkey" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="0" Grid.Column="1" x:Name="CommandHotkeyCombo" Margin="0,4" Padding="6,3" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="AI model" VerticalAlignment="Center" />
+            <TextBox Grid.Row="1" Grid.Column="1" x:Name="OllamaModelBox" Margin="0,4" Padding="6,3" />
+        </Grid>
+
         <TextBlock x:Name="ModelHint" Foreground="#B06000" TextWrapping="Wrap"
                    Margin="0,12,0,0" Visibility="Collapsed" />
 

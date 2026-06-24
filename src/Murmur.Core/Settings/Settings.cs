@@ -71,6 +71,21 @@ public sealed class MurmurSettings
     public bool TerminalStripTrailingPunctuation { get; set; } = true;
 
     /// <summary>
+    /// Enable Command Mode: hold the command hotkey, speak an instruction, and a local Ollama
+    /// model rewrites the currently selected text. Off by default (requires Ollama installed).
+    /// </summary>
+    public bool CommandModeEnabled { get; set; }
+
+    /// <summary>Virtual-key for Command Mode (push-to-talk). Defaults to Right Alt (0xA5).</summary>
+    public int CommandModeHotkeyVirtualKey { get; set; } = 0xA5;
+
+    /// <summary>Base URL of the local Ollama server.</summary>
+    public string OllamaEndpoint { get; set; } = "http://localhost:11434";
+
+    /// <summary>Ollama model used for Command Mode rewrites.</summary>
+    public string OllamaModel { get; set; } = "llama3.2";
+
+    /// <summary>
     /// Delay before the original clipboard contents are restored after a paste, in
     /// milliseconds. Must be long enough for the target app to complete the paste;
     /// restoring synchronously corrupts the user's clipboard. Defaults to 150 ms.

@@ -25,5 +25,9 @@ public sealed class FakeKeystrokeSender : IKeystrokeSender
         OnPasteChord?.Invoke();
     }
 
+    public int CopyChordCount { get; private set; }
+
+    public void SendCopyChord() => CopyChordCount++;
+
     public void SendUnicodeText(string text) => LastUnicodeText = text;
 }

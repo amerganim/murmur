@@ -50,6 +50,12 @@ public partial class SettingsWindow : Window
         CustomWordsBox.Text = settings.CustomVocabulary;
         AutoStartCheck.IsChecked = settings.StartWithWindows;
 
+        CommandModeCheck.IsChecked = settings.CommandModeEnabled;
+        CommandHotkeyCombo.ItemsSource = HotkeyOptions.All;
+        CommandHotkeyCombo.SelectedItem = FindOption(HotkeyOptions.All, settings.CommandModeHotkeyVirtualKey)
+            ?? HotkeyOptions.All[2]; // Right Alt
+        OllamaModelBox.Text = settings.OllamaModel;
+
         ModelCombo.SelectionChanged += OnModelSelectionChanged;
     }
 
@@ -98,6 +104,14 @@ public partial class SettingsWindow : Window
         _settings.TerminalStripTrailingPunctuation = TerminalPunctuationCheck.IsChecked == true;
         _settings.CustomVocabulary = CustomWordsBox.Text.Trim();
         _settings.StartWithWindows = AutoStartCheck.IsChecked == true;
+
+        _settings.CommandModeEnabled = CommandModeCheck.IsChecked == true;
+        _settings.CommandModeHotkeyVirtualKey = ((NamedOption<int>)CommandHotkeyCombo.SelectedItem).Value;
+        var model = OllamaModelBox.Text.Trim();
+        if (!string.IsNullOrEmpty(model))
+        {
+            _settings.OllamaModel = model;
+        }
 
         DialogResult = true;
     }

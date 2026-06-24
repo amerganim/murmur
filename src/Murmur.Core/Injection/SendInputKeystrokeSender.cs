@@ -35,6 +35,19 @@ public sealed class SendInputKeystrokeSender : IKeystrokeSender
     }
 
     /// <inheritdoc />
+    public void SendCopyChord()
+    {
+        var inputs = new[]
+        {
+            KeyDown(NativeMethods.VK_CONTROL),
+            KeyDown(NativeMethods.VK_C),
+            KeyUp(NativeMethods.VK_C),
+            KeyUp(NativeMethods.VK_CONTROL),
+        };
+        Send(inputs);
+    }
+
+    /// <inheritdoc />
     public void SendUnicodeText(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
